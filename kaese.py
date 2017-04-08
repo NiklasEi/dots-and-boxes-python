@@ -1,12 +1,23 @@
 import pygame
 import numpy as np
+import sys
 
 
 gridSize = 10
-startWalls = 75
+
+if len(sys.argv) > 1:
+    gridSize = int(sys.argv[1])
+
+startWalls = int(0.75 * gridSize**2)
+
+play = True
+
+a_boxes = 0
+b_boxes = 0
+x_boxes = 0
 
 turn = "X"
-caption = "Kaese           Player: "
+caption = "'s turn    "
 
 #   0 empty 1 is A 2 is B and 3 is X
 grid = np.zeros((gridSize, gridSize), np.int)
@@ -113,6 +124,7 @@ while startWalls > 0 and tries < 4*gridSize**2:
 
 
 def set_all_slots():
+    global a_boxes, b_boxes, x_boxes
     to_return = 0
 
     for column_ in range(gridSize):
@@ -123,16 +135,41 @@ def set_all_slots():
             if turn == "A":
                 grid[column_][row_] = 1
                 screen.blit(A, (column_ * 30 + 4, row_ * 30 + 4))
+                a_boxes += 1
             elif turn == "B":
                 grid[column_][row_] = 2
                 screen.blit(B, (column_ * 30 + 4, row_ * 30 + 4))
+                b_boxes += 1
             elif turn == "X":
                 grid[column_][row_] = 3
                 screen.blit(X, (column_ * 30 + 4, row_ * 30 + 4))
+                x_boxes += 1
 
             to_return += 1
 
     return to_return
+
+
+def won():
+    global a_boxes, b_boxes, x_boxes
+
+    if a_boxes + b_boxes + x_boxes == gridSize**2:
+        if a_boxes < b_boxes:
+            won_caption = "Player B won!   Congrats"
+        elif b_boxes < a_boxes:
+            won_caption = "Player A won!   Congrats"
+        else:
+            won_caption = "It's a tie!"
+
+        # set the display caption
+        pygame.display.set_caption(won_caption)
+
+        # update the players screen
+        pygame.display.flip()
+
+        return True
+    else:
+        return False
 
 
 def show():
@@ -175,7 +212,7 @@ def show():
                 screen.blit(X, (x,y))
 
     # set the display caption
-    pygame.display.set_caption(caption + turn)
+    pygame.display.set_caption(turn + caption + "     A:" + str(a_boxes) + "   B:"+str(b_boxes))
 
     # update the players screen
     pygame.display.flip()
@@ -196,6 +233,8 @@ while True:
 
         # left click
         elif event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0]:
+            if not play:
+                continue
 
             # get the current position of the cursor
             x = pygame.mouse.get_pos()[0]
@@ -228,10 +267,15 @@ while True:
                 elif turn == "B":
                     turn = "A"
 
-            # set the display caption
-            pygame.display.set_caption(caption + turn)
+            if won():
+                play = False
 
-            # update the players screen
-            pygame.display.flip()
+            else:
+
+                # set the display caption
+                pygame.display.set_caption(turn + caption + "     A:" + str(a_boxes) + "   B:" + str(b_boxes))
+
+                # update the players screen
+                pygame.display.flip()
 
 
