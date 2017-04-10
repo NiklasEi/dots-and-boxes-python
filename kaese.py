@@ -3,15 +3,21 @@ import numpy as np
 import sys
 
 
+# default grid size
 gridSize = 10
 
+# if a different grid size is given use it
 if len(sys.argv) > 1:
     gridSize = int(sys.argv[1])
 
+# It turns out that there are nice structures when you try setting ~0.75 walls per slot but still some walls to draw
+#   before closing gets possible
 startWalls = int(0.75 * gridSize**2)
 
+# set to false when game is finished to ignore clicks
 play = True
 
+# variables for the boxes for each player (x would be computer)
 a_boxes = 0
 b_boxes = 0
 x_boxes = 0
@@ -19,13 +25,14 @@ x_boxes = 0
 turn = "X"
 caption = "'s turn    "
 
-#   0 empty 1 is A 2 is B and 3 is X
+# 0 empty 1 is A 2 is B and 3 is X
 grid = np.zeros((gridSize, gridSize), np.int)
 
-# boolean array to save covered/uncovered info about every slot
+# boolean array to save which walls are set
 upperSet = np.zeros((gridSize, gridSize), np.dtype(bool))
 leftSet = np.zeros((gridSize, gridSize), np.dtype(bool))
 
+# set the outer walls
 for column in range(gridSize):
     for row in range(gridSize):
         if column ==0:
@@ -37,7 +44,7 @@ for column in range(gridSize):
 
 # initialize pygame
 pygame.init()
-# set the display size (our pictures are 15*15)
+# set the display size (one slo has 30x30 pixes with the walls 4x26 and the box 26x26)
 screen = pygame.display.set_mode((30 * gridSize + 4, 30 * gridSize + 4))
 
 # load all images
@@ -57,7 +64,7 @@ lineYempty = pygame.image.load("pics/lineYempty.png")
 
 def get_number_of_walls(slot_column, slot_row):
     """
-    Get the number of set walls arround the passed slot
+    Get the number of set walls around the passed slot
     :param slot_column: x of the slot
     :param slot_row: y of the slot
     :return: number of set walls
@@ -90,6 +97,7 @@ def get_wall(pos_x, pos_y):
     wall_slot_x = pos_x / 30
     wall_slot_y = pos_y / 30
 
+    # in a corner
     if rest_x < 4 and rest_y < 4:
         return -1, -1
 
@@ -101,11 +109,13 @@ def get_wall(pos_x, pos_y):
         # is upper wall of the slot
         return wall_slot_x*30 + 4, wall_slot_y*30
 
+    # inside the box => not a wall
     return -1, -1
 
-
+# limit the number of tries
 tries = 0
 
+# set the start walls randomly but do not create any oportunity to directly close boxes
 while startWalls > 0 and tries < 4*gridSize**2:
     x = np.random.random_integers(0, gridSize-1)
     y = np.random.random_integers(0, gridSize-1)
@@ -124,6 +134,10 @@ while startWalls > 0 and tries < 4*gridSize**2:
 
 
 def set_all_slots():
+    """
+    Find all newly closed boxes and close them for the current player
+    :return: number of closed boxes
+    """
     global a_boxes, b_boxes, x_boxes
     to_return = 0
 
@@ -151,6 +165,11 @@ def set_all_slots():
 
 
 def won():
+    """
+    Check whether the game was finished
+    If so change the caption to display the winner
+    :return: won or not
+    """
     global a_boxes, b_boxes, x_boxes
 
     if a_boxes + b_boxes + x_boxes == gridSize**2:
@@ -175,7 +194,7 @@ def won():
 def show():
     """
     Reload the screen
-    Use the current grid and cover/flag information to
+    Use the current grid and wall information to
     update the players screen
     """
 
@@ -217,8 +236,13 @@ def show():
     # update the players screen
     pygame.display.flip()
 
+# in an older version boxes could be closed directly after starting walls were set
 set_all_slots()
+
+# now it's the first players turn
 turn = "A"
+
+# print the game
 show()
 
 while True:
