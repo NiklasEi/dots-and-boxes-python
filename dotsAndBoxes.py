@@ -5,20 +5,14 @@ import sys
 
 class Game:
     def __init__(self):
-
-        # default grid size
-        self.grid_size = 10
-
-        # if a different grid size is given use it
+        self.grid_size = 10  # default
         if len(sys.argv) > 1:
             self.grid_size = int(sys.argv[1])
 
-        # It turns out that there are nice structures when you try setting ~0.75 walls per slot but still some walls to draw
-        #   before closing gets possible
+        # It turns out that there are nice structures when setting ~0.75 walls per slot
         self.start_walls = int(0.75 * self.grid_size ** 2)
 
-        # set to false when game is finished to ignore clicks
-        self.play = True
+        self.accept_clicks = True
 
         # variables for the boxes for each player (x would be computer)
         self.a_boxes = 0
@@ -29,25 +23,22 @@ class Game:
         self.caption = "'s turn    "
 
         # 0 empty 1 is A 2 is B and 3 is X
-        self.grid = np.zeros((self.grid_size, self.grid_size), np.int)
-
-        # boolean array to save which walls are set
-        self.upperSet = np.zeros((self.grid_size, self.grid_size), np.dtype(bool))
-        self.leftSet = np.zeros((self.grid_size, self.grid_size), np.dtype(bool))
+        self.grid_status = np.zeros((self.grid_size, self.grid_size), np.int)
+        self.upper_walls_set_flags = np.zeros((self.grid_size, self.grid_size), np.dtype(bool))
+        self.left_walls_set_flags = np.zeros((self.grid_size, self.grid_size), np.dtype(bool))
 
         # set the outer walls
         for column in range(self.grid_size):
             for row in range(self.grid_size):
-                if column ==0:
-                    self.leftSet[column][row] = True
-
+                if column == 0:
+                    self.left_walls_set_flags[column][row] = True
                 if row == 0:
-                    self.upperSet[column][row] = True
-
+                    self.upper_walls_set_flags[column][row] = True
 
         # initialize pygame
         pygame.init()
-        # set the display size (one slo has 30x30 pixes with the walls 4x26 and the box 26x26)
+
+        # set the display size (one slot has 30x30 pixels; Walls: 4x26 Box: 26x26)
         self.screen = pygame.display.set_mode([30 * self.grid_size + 4, 30 * self.grid_size + 4])
 
         # load all images
@@ -55,44 +46,36 @@ class Game:
         self.A = pygame.image.load("pics/A.png")
         self.B = pygame.image.load("pics/B.png")
         self.X = pygame.image.load("pics/X.png")
-
         self.block = pygame.image.load("pics/block.png")
-
         self.lineX = pygame.image.load("pics/lineX.png")
         self.lineXempty = pygame.image.load("pics/lineXempty.png")
-
         self.lineY = pygame.image.load("pics/lineY.png")
         self.lineYempty = pygame.image.load("pics/lineYempty.png")
 
-
-        # limit the number of tries
         tries = 0
-
-        # set the start walls randomly but do not create any oportunity to directly close boxes
+        # set the start walls randomly but do not create any opportunity to directly close boxes
         while self.start_walls > 0 and tries < 4*self.grid_size**2:
             x = np.random.random_integers(0, self.grid_size-1)
             y = np.random.random_integers(0, self.grid_size-1)
-            up = np.random.random_integers(0,1)
+            up = np.random.random_integers(0, 1)
 
             if up:
-                if not self.upperSet[x][y] and self.get_number_of_walls(x, y) < 2 and self.get_number_of_walls(x, y - 1) < 2:
-                    self.upperSet[x][y] = True
+                if not self.upper_walls_set_flags[x][y] \
+                        and self.get_number_of_walls(x, y) < 2 \
+                        and self.get_number_of_walls(x, y - 1) < 2:
+                    self.upper_walls_set_flags[x][y] = True
                     self.start_walls -= 1
             else:
-                if not self.leftSet[x][y] and self.get_number_of_walls(x, y) < 2 and self.get_number_of_walls(x - 1, y) < 2:
-                    self.leftSet[x][y] = True
+                if not self.left_walls_set_flags[x][y] \
+                        and self.get_number_of_walls(x, y) < 2 \
+                        and self.get_number_of_walls(x - 1, y) < 2:
+                    self.left_walls_set_flags[x][y] = True
                     self.start_walls -= 1
 
             tries += 1
 
-
-        # in an older version boxes could be closed directly after starting walls were set
-        self.set_all_slots()
-
         # now it's the first players turn
         self.turn = "A"
-
-        # print the game
         self.show()
 
         while True:
@@ -103,34 +86,32 @@ class Game:
                     pygame.quit()
                     exit(0)
 
-                # now check for left and right click
-
                 # left click
                 elif event.type == pygame.MOUSEBUTTONDOWN and pygame.mouse.get_pressed()[0]:
-                    if not self.play:
+                    if not self.accept_clicks:
                         continue
 
                     # get the current position of the cursor
                     x = pygame.mouse.get_pos()[0]
                     y = pygame.mouse.get_pos()[1]
 
-                    # check weather it was an unset wall that was clicked
+                    # check whether it was a not set wall that was clicked
                     wall_x, wall_y = self.get_wall(x, y)
 
                     if not (wall_x >= 0 and wall_y >= 0):
                         continue
 
-                    upperWall = wall_y % 30 == 0
+                    upper_wall = wall_y % 30 == 0
 
-                    if upperWall:
-                        if not self.upperSet[wall_x / 30][wall_y / 30]:
-                            self.upperSet[wall_x / 30][wall_y / 30] = True
+                    if upper_wall:
+                        if not self.upper_walls_set_flags[wall_x / 30][wall_y / 30]:
+                            self.upper_walls_set_flags[wall_x / 30][wall_y / 30] = True
                             self.screen.blit(self.lineX, (wall_x, wall_y))
                         else:
                             continue
                     else:
-                        if not self.leftSet[wall_x / 30][wall_y / 30]:
-                            self.leftSet[wall_x / 30][wall_y / 30] = True
+                        if not self.left_walls_set_flags[wall_x / 30][wall_y / 30]:
+                            self.left_walls_set_flags[wall_x / 30][wall_y / 30] = True
                             self.screen.blit(self.lineY, (wall_x, wall_y))
                         else:
                             continue
@@ -142,7 +123,7 @@ class Game:
                             self.turn = "A"
 
                     if self.won():
-                        self.play = False
+                        self.accept_clicks = False
 
                     else:
 
@@ -164,18 +145,18 @@ class Game:
 
         if slot_column == self.grid_size - 1:
             number_of_walls += 1
-        elif self.leftSet[slot_column + 1][slot_row]:
+        elif self.left_walls_set_flags[slot_column + 1][slot_row]:
             number_of_walls += 1
 
         if slot_row == self.grid_size - 1:
             number_of_walls += 1
-        elif self.upperSet[slot_column][slot_row + 1]:
+        elif self.upper_walls_set_flags[slot_column][slot_row + 1]:
             number_of_walls += 1
 
-        if self.leftSet[slot_column][slot_row]:
+        if self.left_walls_set_flags[slot_column][slot_row]:
             number_of_walls += 1
 
-        if self.upperSet[slot_column][slot_row]:
+        if self.upper_walls_set_flags[slot_column][slot_row]:
             number_of_walls += 1
 
         return number_of_walls
@@ -212,19 +193,19 @@ class Game:
 
         for column_ in range(self.grid_size):
             for row_ in range(self.grid_size):
-                if self.grid[column_][row_] != 0 or self.get_number_of_walls(column_, row_) < 4:
+                if self.grid_status[column_][row_] != 0 or self.get_number_of_walls(column_, row_) < 4:
                     continue
 
                 if self.turn == "A":
-                    self.grid[column_][row_] = 1
+                    self.grid_status[column_][row_] = 1
                     self.screen.blit(self.A, (column_ * 30 + 4, row_ * 30 + 4))
                     self.a_boxes += 1
                 elif self.turn == "B":
-                    self.grid[column_][row_] = 2
+                    self.grid_status[column_][row_] = 2
                     self.screen.blit(self.B, (column_ * 30 + 4, row_ * 30 + 4))
                     self.b_boxes += 1
                 elif self.turn == "X":
-                    self.grid[column_][row_] = 3
+                    self.grid_status[column_][row_] = 3
                     self.screen.blit(self.X, (column_ * 30 + 4, row_ * 30 + 4))
                     self.x_boxes += 1
 
@@ -238,8 +219,7 @@ class Game:
         If so change the caption to display the winner
         :return: won or not
         """
-
-        if self.a_boxes + self.b_boxes + self.x_boxes == self.grid_size **2:
+        if self.a_boxes + self.b_boxes + self.x_boxes == self.grid_size ** 2:
             if self.a_boxes < self.b_boxes:
                 won_caption = "Player B won!   Congrats"
             elif self.b_boxes < self.a_boxes:
@@ -263,8 +243,6 @@ class Game:
         Use the current grid and wall information to
         update the players screen
         """
-
-        # empty the screen
         self.screen.fill(0)
 
         # loop over all slots
@@ -273,13 +251,13 @@ class Game:
                 x, y = column * 30, row * 30
                 self.screen.blit(self.block, (x, y))
                 x += 4
-                if not self.upperSet[column][row]:
+                if not self.upper_walls_set_flags[column][row]:
                     self.screen.blit(self.lineXempty, (x, y))
                 else:
                     self.screen.blit(self.lineX, (x, y))
                 x -= 4
                 y += 4
-                if not self.leftSet[column][row]:
+                if not self.left_walls_set_flags[column][row]:
                     self.screen.blit(self.lineYempty, (x, y))
                 else:
                     self.screen.blit(self.lineY, (x, y))
@@ -287,20 +265,17 @@ class Game:
                 # calculate x and y in pixels
                 x, y = column * 30 + 4, row * 30 + 4
 
-                if self.grid[column][row] == 0:
+                if self.grid_status[column][row] == 0:
                     self.screen.blit(self.empty, (x, y))
-                elif self.grid[column][row] == 1:
+                elif self.grid_status[column][row] == 1:
                     self.screen.blit(self.A, (x, y))
-                elif self.grid[column][row] == 2:
+                elif self.grid_status[column][row] == 2:
                     self.screen.blit(self.B, (x, y))
-                elif self.grid[column][row] == 3:
+                elif self.grid_status[column][row] == 3:
                     self.screen.blit(self.X, (x, y))
 
-        # set the display caption
         pygame.display.set_caption(self.turn + self.caption + "     A:" + str(self.a_boxes) + "   B:" + str(
             self.b_boxes))
-
-        # update the players screen
         pygame.display.flip()
 
 
