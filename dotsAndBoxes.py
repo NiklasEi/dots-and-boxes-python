@@ -55,9 +55,9 @@ class Game:
         tries = 0
         # set the start walls randomly but do not create any opportunity to directly close boxes
         while self.start_walls > 0 and tries < 4*self.grid_size**2:
-            x = np.random.random_integers(0, self.grid_size-1)
-            y = np.random.random_integers(0, self.grid_size-1)
-            up = np.random.random_integers(0, 1)
+            x = np.random.randint(self.grid_size)
+            y = np.random.randint(self.grid_size)
+            up = np.random.randint(2)
 
             if up:
                 if not self.upper_walls_set_flags[x][y] \
@@ -104,14 +104,14 @@ class Game:
                     upper_wall = wall_y % 30 == 0
 
                     if upper_wall:
-                        if not self.upper_walls_set_flags[wall_x / 30][wall_y / 30]:
-                            self.upper_walls_set_flags[wall_x / 30][wall_y / 30] = True
+                        if not self.upper_walls_set_flags[wall_x//30][wall_y//30]:
+                            self.upper_walls_set_flags[wall_x//30][wall_y//30] = True
                             self.screen.blit(self.lineX, (wall_x, wall_y))
                         else:
                             continue
                     else:
-                        if not self.left_walls_set_flags[wall_x / 30][wall_y / 30]:
-                            self.left_walls_set_flags[wall_x / 30][wall_y / 30] = True
+                        if not self.left_walls_set_flags[wall_x//30][wall_y//30]:
+                            self.left_walls_set_flags[wall_x//30][wall_y//30] = True
                             self.screen.blit(self.lineY, (wall_x, wall_y))
                         else:
                             continue
@@ -166,8 +166,8 @@ class Game:
         rest_x = pos_x % 30
         rest_y = pos_y % 30
 
-        wall_slot_x = pos_x / 30
-        wall_slot_y = pos_y / 30
+        wall_slot_x = pos_x//30
+        wall_slot_y = pos_y//30
 
         # in a corner
         if rest_x < 4 and rest_y < 4:
@@ -279,4 +279,4 @@ class Game:
         pygame.display.flip()
 
 
-game = Game()
+game = Game()  # start a game
